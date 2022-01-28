@@ -121,16 +121,13 @@ class Game:
 							self.score += alien.value
 						laser.kill()
 						self.explosion_sound.play()
-						print(3)
-				print(11)
 				if self.boss_alive:
 					if self.boss_lives > 0:
 						if pygame.sprite.spritecollide(laser, self.aliens, False):
 							laser.kill()
 							self.boss_lives -= 1
 							self.explosion_sound.play()
-							print(1)
-					print(12)
+
 					if self.boss_lives == 0:
 						if pygame.sprite.spritecollide(laser, self.aliens, True):
 							laser.kill()
@@ -138,7 +135,6 @@ class Game:
 							self.boss_lives -= 1
 							self.boss_alive = False
 							self.score += 1000
-							print(2)
 
 				if pygame.sprite.spritecollide(laser, self.extra, True):
 					self.score += 500
