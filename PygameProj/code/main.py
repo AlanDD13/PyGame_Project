@@ -1,4 +1,5 @@
-import pygame, sys
+import pygame
+import sys
 from player import Player
 import obstacle
 from alien import Alien, Extra
@@ -11,9 +12,9 @@ class Game:
 		player_sprite = Player((screen_width / 2, screen_height), screen_width, 5)
 		self.player = pygame.sprite.GroupSingle(player_sprite)
 
-		self.lives = 3
+		self.lives = 4
 		self.live_surf = pygame.image.load('../graphics/player.png').convert_alpha()
-		self.live_x_start_pos = screen_width - (self.live_surf.get_size()[0] * 2 + 20)
+		self.live_x_start_pos = screen_width - (self.live_surf.get_size()[0] * 3 + 20)
 		self.score = 0
 		self.font = pygame.font.Font('../font/Pixeled.ttf', 20)
 
@@ -28,15 +29,19 @@ class Game:
 		self.alien_lasers = pygame.sprite.Group()
 		self.alien_setup(rows=6, cols=8)
 		self.alien_direction = 1
+		self.live_surf_boss = pygame.image.load('../graphics/boss_lives.png').convert_alpha()
+		self.live_x_start_pos_boss = screen_width - (self.live_surf_boss.get_size()[0] * 3 + 20)
+		self.boss_alive = False
+		self.boss_lives = 4
 
 		self.extra = pygame.sprite.GroupSingle()
 		self.extra_spawn_time = randint(40, 80)
 
 		music = pygame.mixer.Sound('../audio/music.wav')
-		music.set_volume(0.2)
+		music.set_volume(0.3)
 		music.play(loops=-1)
 		self.laser_sound = pygame.mixer.Sound('../audio/laser.wav')
-		self.laser_sound.set_volume(0.5)
+		self.laser_sound.set_volume(0.3)
 		self.explosion_sound = pygame.mixer.Sound('../audio/explosion.wav')
 		self.explosion_sound.set_volume(0.3)
 
@@ -76,6 +81,13 @@ class Game:
 			elif alien.rect.left <= 0:
 				self.alien_direction = 1
 				self.alien_move_down(2)
+			if self.boss_alive:
+				if alien.rect.right >= screen_width:
+					self.alien_direction = -1
+					self.alien_move_down(20)
+				elif alien.rect.left <= 0:
+					self.alien_direction = 1
+					self.alien_move_down(20)
 
 	def alien_move_down(self, distance):
 		if self.aliens:
@@ -102,12 +114,31 @@ class Game:
 				if pygame.sprite.spritecollide(laser, self.blocks, True):
 					laser.kill()
 
-				aliens_hit = pygame.sprite.spritecollide(laser, self.aliens, True)
-				if aliens_hit:
-					for alien in aliens_hit:
-						self.score += alien.value
-					laser.kill()
-					self.explosion_sound.play()
+				if self.boss_alive is False:
+					alien_kill = pygame.sprite.spritecollide(laser, self.aliens, True)
+					if alien_kill:
+						for alien in alien_kill:
+							self.score += alien.value
+						laser.kill()
+						self.explosion_sound.play()
+						print(3)
+				print(11)
+				if self.boss_alive:
+					if self.boss_lives > 0:
+						if pygame.sprite.spritecollide(laser, self.aliens, False):
+							laser.kill()
+							self.boss_lives -= 1
+							self.explosion_sound.play()
+							print(1)
+					print(12)
+					if self.boss_lives == 0:
+						if pygame.sprite.spritecollide(laser, self.aliens, True):
+							laser.kill()
+							self.explosion_sound.play()
+							self.boss_lives -= 1
+							self.boss_alive = False
+							self.score += 1000
+							print(2)
 
 				if pygame.sprite.spritecollide(laser, self.extra, True):
 					self.score += 500
@@ -115,7 +146,6 @@ class Game:
 
 		if self.alien_lasers:
 			for laser in self.alien_lasers:
-				# obstacle collisions
 				if pygame.sprite.spritecollide(laser, self.blocks, True):
 					laser.kill()
 
@@ -133,11 +163,21 @@ class Game:
 				if pygame.sprite.spritecollide(alien, self.player, False):
 					pygame.quit()
 					sys.exit()
+
+	def alien_boss_creation(self):
+		if not self.aliens.sprites() and self.boss_alive is False and self.boss_lives > 0:
+			self.aliens.add(Alien('boss1', 0, 100))
+			self.boss_alive = True
 	
 	def display_lives(self):
 		for live in range(self.lives - 1):
 			x = self.live_x_start_pos + (live * (self.live_surf.get_size()[0] + 10))
 			screen.blit(self.live_surf, (x, 8))
+
+		if self.boss_alive:
+			for live in range(self.boss_lives - 1):
+				x = self.live_x_start_pos + (live * (self.live_surf.get_size()[0] + 10))
+				screen.blit(self.live_surf_boss, (x, 80))
 
 	def display_score(self):
 		score_surf = self.font.render(f'score: {self.score}', False, 'white')
@@ -145,8 +185,8 @@ class Game:
 		screen.blit(score_surf, score_rect)
 
 	def victory_message(self):
-		if not self.aliens.sprites():
-			victory_surf = self.font.render('You won', False, 'white')
+		if not self.aliens.sprites() and self.boss_alive is False:
+			victory_surf = self.font.render('You killed the Boss!You won!', False, 'white')
 			victory_rect = victory_surf.get_rect(center=(screen_width / 2, screen_height / 2))
 			screen.blit(victory_surf, victory_rect)
 
@@ -159,6 +199,7 @@ class Game:
 		self.alien_position_checker()
 		self.extra_alien_timer()
 		self.collision_checks()
+		self.alien_boss_creation()
 		
 		self.player.sprite.lasers.draw(screen)
 		self.player.draw(screen)
@@ -190,7 +231,7 @@ if __name__ == '__main__':
 			if event.type == ALIENLASER:
 				game.alien_shoot()
 
-		screen.fill((30, 30, 30))
+		screen.fill((0, 0, 0))
 		game.run()
 			
 		pygame.display.flip()
